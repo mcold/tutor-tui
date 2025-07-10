@@ -1,0 +1,6 @@
+*.log
+*.db
+*.exe
+/DBs
+.idea
+.vscode
