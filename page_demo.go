@@ -4,52 +4,85 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"strconv"
 	"strings"
 )
 
-const tableData = `sale_dt|product_id|status|amount|pcs|_part
-2025-06-01|1|successed|100.00|1|all_1_2_2
-2025-06-01|2|successed|75.00|3|all_1_2_2`
+type Demo struct {
+	frame        tview.Primitive
+	pages        tview.Pages
+	slideContent tview.TextView
+	curTabNum    int
+}
 
-func demo(nextSlide func(), cont content) (frame tview.Primitive) {
+func demo(sl slide) (frame tview.Primitive, pages *tview.Pages, slideContent *tview.TextView) {
 
-	code := tview.NewTextView().
+	slideContent = tview.NewTextView().
 		SetWrap(false).
 		SetDynamicColors(true)
-	code.SetBorderPadding(1, 1, 2, 0)
+	slideContent.SetBorderPadding(1, 1, 2, 0)
 
-	_, err := fmt.Fprint(code, cont.code)
+	_, err := fmt.Fprint(slideContent, sl.content)
 	check(err)
 
-	// TODO: change to Table
-	//tbl := tview.NewTextView().
-	//	SetWrap(false).
-	//	SetDynamicColors(true)
-
-	//tbl := tview.NewTable().
-	//	SetFixed(1, 1)
-	//tbl.SetBorderPadding(1, 1, 2, 0)
-	//
-	//fmt.Fprint(tbl, cont.output)
-
 	flex := tview.NewFlex().SetDirection(tview.FlexRow).
-		AddItem(code, 0, cont.codeProportion, false)
+		AddItem(slideContent, 0, sl.contentProportion, false)
 
-	if cont.direct == "row" {
+	flex.SetBackgroundColor(tcell.ColorWhite)
+
+	if sl.direct == "row" {
 		flex.SetDirection(tview.FlexRow)
 	} else {
 		flex.SetDirection(tview.FlexColumn)
 	}
 
-	if cont.outType == "table" {
+	pages = tview.NewPages()
+	for index, tabSlide := range sl.tabs {
+		primitive := getTabPage(tabSlide)
+		pages.AddPage(strconv.Itoa(index), primitive, true, index == 0)
+	}
+	if pages.GetPageCount() > 0 {
+		flex.AddItem(pages, 0, sl.pageProportion, true)
+	}
+
+	flex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Rune() == 'n' && event.Modifiers() == tcell.ModAlt {
+			newNum := sl.tabNum + 1
+			if newNum <= pages.GetPageCount() {
+				sl.tabNum = newNum
+				pageMain.demos[pageMain.curSlideNum].curTabNum = sl.tabNum
+			}
+			pages.SwitchToPage(strconv.Itoa(sl.tabNum))
+			return nil
+		} else if event.Rune() == 'p' && event.Modifiers() == tcell.ModAlt {
+			newNum := sl.tabNum - 1
+			if newNum > 0 {
+				sl.tabNum = newNum
+				pageMain.demos[pageMain.curSlideNum].curTabNum = sl.tabNum
+			}
+			pages.SwitchToPage(strconv.Itoa(sl.tabNum))
+			return nil
+		}
+		return event
+
+	})
+
+	return flex, pages, slideContent
+}
+
+func getTabPage(tabSlide Tab) (frame tview.Primitive) {
+
+	flex := tview.NewFlex().SetDirection(tview.FlexRow)
+	flex.SetBackgroundColor(tcell.ColorWhite)
+
+	if tabSlide.contentType == "table" {
 		table := tview.NewTable().
 			SetFixed(1, 1).
 			SetSelectable(true, true).
 			SetSeparator(' ').
 			SetBorders(false)
 
-		// TODO: clear separate ----- if it exists in output
-		for row, line := range strings.Split(cont.output, "\n") {
+		for row, line := range strings.Split(tabSlide.content, "\n") {
 			for column, cell := range strings.Split(line, "|") {
 				color := tcell.ColorWhite
 				if row == 0 {
@@ -61,7 +94,7 @@ func demo(nextSlide func(), cont content) (frame tview.Primitive) {
 				align := tview.AlignLeft
 				if row == 0 {
 					align = tview.AlignCenter
-				} else if column == 0 || column >= 3 { // Align right for first column and numeric columns
+				} else if column == 0 || column >= 3 {
 					align = tview.AlignRight
 				}
 
@@ -70,7 +103,6 @@ func demo(nextSlide func(), cont content) (frame tview.Primitive) {
 					SetAlign(align).
 					SetSelectable(true)
 
-				// Set expansion for middle columns if needed
 				if column >= 1 && column <= 2 {
 					tableCell.SetExpansion(1)
 				}
@@ -79,17 +111,39 @@ func demo(nextSlide func(), cont content) (frame tview.Primitive) {
 			}
 
 		}
-		flex.AddItem(table, 0, cont.outProportion, false)
+
+		flex.AddItem(table, 0, 5, false)
+
+		flex.SetFocusFunc(func() {
+			app.SetFocus(table)
+		})
 	} else {
 		out := tview.NewTextView().
 			SetWrap(false).
 			SetDynamicColors(true)
 		out.SetBorderPadding(1, 1, 2, 0)
 
-		_, err := fmt.Fprint(out, cont.output)
+		_, err := fmt.Fprint(out, tabSlide.content)
 		check(err)
 
-		flex.AddItem(out, 0, cont.outProportion, false)
+		flex.AddItem(out, 0, 5, false)
+
+		flex.SetFocusFunc(func() {
+			app.SetFocus(out)
+		})
+	}
+
+	if len(tabSlide.comment) > 0 {
+		com := tview.NewTextView().
+			SetWrap(false).
+			SetDynamicColors(true)
+
+		com.SetText(strings.TrimSpace(tabSlide.comment))
+		flex.AddItem(com, 0, 1, false)
+	}
+
+	if len(tabSlide.name) > 0 {
+		flex.SetTitle(tabSlide.name).SetTitleAlign(tview.AlignLeft)
 	}
 
 	return flex
