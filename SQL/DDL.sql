@@ -1,8 +1,19 @@
-CREATE TABLE IF NOT EXISTS ITEM 
+DROP TABLE IF EXISTS PROJECT;
+CREATE TABLE IF NOT EXISTS PROJECT
 (
-	id      integer primary key autoincrement,
-    name    varchar not null,
-    comment varchar
+    id      integer primary key autoincrement,
+    name    varchar not null
+);
+
+
+DROP TABLE IF EXISTS ITEM;
+CREATE TABLE IF NOT EXISTS ITEM
+(
+	id          integer primary key autoincrement,
+    id_project  integer not null,
+    name        varchar not null,
+    comment     varchar,
+    FOREIGN KEY (id_project) REFERENCES project (id) ON DELETE CASCADE
 );
 
 DROP TABLE IF EXISTS SLIDE;

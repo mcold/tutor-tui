@@ -2,12 +2,14 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
-	_ "modernc.org/sqlite"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
+
+	_ "modernc.org/sqlite"
 )
 
 type databaseType struct {
@@ -81,6 +83,49 @@ func getContent(idItem int) []slide {
 	check(err)
 
 	return resCont
+}
+
+func getItemId(itemName string, bGetFirst bool) int {
+
+	query := `select id
+				   , name
+				from item
+			  where lower(name) like lower('%` + itemName + `%')`
+
+	cont, err := database.Query(query)
+	check(err)
+
+	var id sql.NullInt64
+	var name sql.NullString
+	for cont.Next() {
+		err = cont.Scan(&id, &name)
+		check(err)
+
+		if bGetFirst {
+			return int(id.Int64)
+		} else {
+			fmt.Println(name.String)
+		}
+	}
+
+	return -1
+}
+
+func countItems(itemName string) int {
+
+	query := `select count(1) cnt
+				from item
+			  where lower(name) like lower('%` + itemName + `%')`
+
+	cont, err := database.Query(query)
+	check(err)
+
+	var count sql.NullInt64
+	cont.Next()
+	err = cont.Scan(&count)
+	check(err)
+
+	return int(count.Int64)
 }
 
 func getTabs(idSlide int) []Tab {

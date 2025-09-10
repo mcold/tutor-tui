@@ -23,6 +23,7 @@ func (application *applicationType) init() {
 	pageMain.build()
 
 	application.registerGlobalShortcuts()
+	application.pages.SwitchToPage("main")
 
 	if err := app.SetRoot(application.pages, true).EnableMouse(true).EnablePaste(true).Run(); err != nil {
 		panic(err)

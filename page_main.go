@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/rivo/tview"
 	"strconv"
+
+	"github.com/rivo/tview"
 )
 
 type pageMainType struct {
@@ -18,12 +19,9 @@ var pageMain pageMainType
 
 func (pageMain *pageMainType) build() {
 
-	err := database.Connect()
-	check(err)
-
 	pageMain.curSlideNum = 0
 
-	contArr := getContent(1)
+	contArr := getContent(ItemID)
 
 	pageMain.pages = tview.NewPages()
 	pageMain.info = tview.NewTextView().
@@ -39,7 +37,7 @@ func (pageMain *pageMainType) build() {
 
 	for index, cont := range contArr {
 		primitive, pgs, slideContent := demo(cont)
-		pageMain.demos = append(pageMain.demos, Demo{primitive, *pgs, *slideContent, 0})
+		pageMain.demos = append(pageMain.demos, Demo{primitive, *pgs, *slideContent, 0, cont.id})
 		pageMain.pages.AddPage(strconv.Itoa(index), primitive, true, index == 0)
 		fmt.Fprintf(pageMain.info, `%d ["%d"][darkcyan]%s[white][""]  `, index+1, index, cont.name)
 	}

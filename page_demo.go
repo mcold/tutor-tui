@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
 	"strconv"
 	"strings"
+
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 )
 
 type Demo struct {
@@ -13,6 +14,7 @@ type Demo struct {
 	pages        tview.Pages
 	slideContent tview.TextView
 	curTabNum    int
+	idSlide      int
 }
 
 func demo(sl slide) (frame tview.Primitive, pages *tview.Pages, slideContent *tview.TextView) {
@@ -48,7 +50,7 @@ func demo(sl slide) (frame tview.Primitive, pages *tview.Pages, slideContent *tv
 	flex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Rune() == 'n' && event.Modifiers() == tcell.ModAlt {
 			newNum := sl.tabNum + 1
-			if newNum <= pages.GetPageCount() {
+			if newNum < pages.GetPageCount() {
 				sl.tabNum = newNum
 				pageMain.demos[pageMain.curSlideNum].curTabNum = sl.tabNum
 			}
@@ -56,7 +58,7 @@ func demo(sl slide) (frame tview.Primitive, pages *tview.Pages, slideContent *tv
 			return nil
 		} else if event.Rune() == 'p' && event.Modifiers() == tcell.ModAlt {
 			newNum := sl.tabNum - 1
-			if newNum > 0 {
+			if newNum >= 0 {
 				sl.tabNum = newNum
 				pageMain.demos[pageMain.curSlideNum].curTabNum = sl.tabNum
 			}
@@ -123,9 +125,9 @@ func getTabPage(tabSlide Tab) (frame tview.Primitive) {
 			SetDynamicColors(true)
 		out.SetBorderPadding(1, 1, 2, 0)
 
-		_, err := fmt.Fprint(out, tabSlide.content)
+		_, err := fmt.Fprint(out, "---- ["+strconv.Itoa(tabSlide.num)+"]\n\n"+tabSlide.content)
 		check(err)
-
+		
 		flex.AddItem(out, 0, 5, false)
 
 		flex.SetFocusFunc(func() {
@@ -145,6 +147,10 @@ func getTabPage(tabSlide Tab) (frame tview.Primitive) {
 	if len(tabSlide.name) > 0 {
 		flex.SetTitle(tabSlide.name).SetTitleAlign(tview.AlignLeft)
 	}
+
+	flex.SetTitle(strconv.Itoa(tabSlide.num))
+	flex.SetBorder(true)
+	flex.SetBorderColor(tcell.ColorWhite)
 
 	return flex
 }
