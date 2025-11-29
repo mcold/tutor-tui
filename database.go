@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -18,6 +19,58 @@ type databaseType struct {
 	ConnectionString string
 }
 
+func (database *databaseType) InitializeDatabase() error {
+	dbDir := "DBs"
+	if err := os.MkdirAll(dbDir, 0755); err != nil {
+		return fmt.Errorf("failed to create DBs directory: %v", err)
+	}
+
+	dbPath := filepath.Join(dbDir, "DB.db")
+
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		fmt.Println("Database not found. Creating new database...")
+
+		file, err := os.Create(dbPath)
+		if err != nil {
+			return fmt.Errorf("failed to create database file: %v", err)
+		}
+		file.Close()
+
+		fmt.Println("Database file created successfully")
+	} else {
+		fmt.Println("Database already exists")
+	}
+
+	database.Path = dbPath
+	return nil
+}
+
+func (database *databaseType) executeDDL() error {
+	ddlStatements := []string{
+		"DROP TABLE IF EXISTS PROJECT;",
+		"CREATE TABLE IF NOT EXISTS PROJECT (id integer primary key autoincrement, name varchar not null);",
+		"DROP TABLE IF EXISTS ITEM;",
+		"CREATE TABLE IF NOT EXISTS ITEM (id integer primary key autoincrement, id_project integer not null, name varchar not null, comment varchar, FOREIGN KEY (id_project) REFERENCES project (id) ON DELETE CASCADE);",
+		"DROP TABLE IF EXISTS SLIDE;",
+		"CREATE TABLE IF NOT EXISTS SLIDE (id integer primary key autoincrement, id_item integer not null, num integer, name text, content text, content_type text not null default 'code', direct text not null default 'column', content_proportion integer not null default 1, page_proportion integer not null default 2, comment text, FOREIGN KEY (id_item) REFERENCES item (id) ON DELETE CASCADE);",
+		"DROP TABLE IF EXISTS TAB;",
+		"CREATE TABLE IF NOT EXISTS TAB (id integer primary key autoincrement, id_slide integer not null, num integer, name text, content text, content_type text not null default 'table', comment text, FOREIGN KEY (id_slide) REFERENCES slide (id) ON DELETE CASCADE);",
+	}
+
+	for _, statement := range ddlStatements {
+		if strings.TrimSpace(statement) == "" {
+			continue
+		}
+
+		_, err := database.Exec(statement)
+		if err != nil {
+			return fmt.Errorf("failed to execute statement '%s': %v", statement, err)
+		}
+	}
+
+	return nil
+}
+
 var database databaseType
 
 func (database *databaseType) buildConnectionString() {
@@ -25,7 +78,11 @@ func (database *databaseType) buildConnectionString() {
 }
 
 func (database *databaseType) Connect() error {
-	db, err := sql.Open("sqlite", "DBs"+string(os.PathSeparator)+"DB.db")
+	if err := database.InitializeDatabase(); err != nil {
+		return fmt.Errorf("database initialization failed: %v", err)
+	}
+
+	db, err := sql.Open("sqlite", database.Path)
 	check(err)
 
 	if err != nil {
@@ -37,7 +94,30 @@ func (database *databaseType) Connect() error {
 		return err
 	}
 	database.DB = db
+
+	if database.needsDDL() {
+		fmt.Println("Running DDL to create tables...")
+		if err := database.executeDDL(); err != nil {
+			return fmt.Errorf("failed to execute DDL: %v", err)
+		}
+		fmt.Println("Database initialized successfully")
+	} else {
+		fmt.Println("Database tables already exist")
+	}
+
 	return nil
+}
+
+func (database *databaseType) needsDDL() bool {
+	query := "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+
+	var count int
+	err := database.QueryRow(query).Scan(&count)
+	if err != nil {
+		return true
+	}
+
+	return count == 0
 }
 
 func check(err interface{}) {
