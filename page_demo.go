@@ -127,7 +127,7 @@ func getTabPage(tabSlide Tab) (frame tview.Primitive) {
 
 		_, err := fmt.Fprint(out, "---- ["+strconv.Itoa(tabSlide.num)+"]\n\n"+tabSlide.content)
 		check(err)
-		
+
 		flex.AddItem(out, 0, 5, false)
 
 		flex.SetFocusFunc(func() {

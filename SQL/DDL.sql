@@ -44,24 +44,3 @@ CREATE TABLE IF NOT EXISTS TAB
     comment 	    text,
     FOREIGN KEY (id_slide) REFERENCES slide (id) ON DELETE CASCADE
 );
-
-INSERT INTO item (name)
-  VALUES ('TRAIT');
-
-
-INSERT INTO slide (id_item
-					, num
-					, name)
-  VALUES(1, 1, 'FIRST'), (1, 2, 'SECOND'), (1, 3, 'THIRD'), (1, 4, 'FOURTH');
-
-
-INSERT INTO tab(id_slide, num, name, content_type)
-  VALUES(2, 1, 'FIRST TAB', 'code')
-		, (2, 2, 'SECOND TAB', 'table')
-		, (2, 3, 'THIRD TAB', 'code')
-		, (2, 4, 'FOURTH TAB', 'table')
-		
-		
-select *
-  from slide;
-  ;

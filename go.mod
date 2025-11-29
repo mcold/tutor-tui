@@ -1,4 +1,4 @@
-module github.com/mcold/lector
+module github.com/mcold/tutor
 
 go 1.24.2
 
